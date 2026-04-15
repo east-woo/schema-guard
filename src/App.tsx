@@ -711,9 +711,116 @@ const UsersView = () => {
 
 const RequestsView = () => {
   const [selectedRequest, setSelectedRequest] = useState<ChangeRequest | null>(MOCK_REQUESTS[0]);
+  const [showFullPreview, setShowFullPreview] = useState(false);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)] relative">
+      {/* Full ERD Preview Modal */}
+      <AnimatePresence>
+        {showFullPreview && selectedRequest && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-8"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-50 w-full h-full rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/20"
+            >
+              <div className="px-8 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <Icons.Eye className="w-5 h-5 text-brand-500" />
+                    Full Schema Preview: {selectedRequest.id}
+                  </h3>
+                  <p className="text-xs text-slate-500">전체 테이블 구조 내에서 변경 사항이 적용된 모습을 시뮬레이션합니다.</p>
+                </div>
+                <button 
+                  onClick={() => setShowFullPreview(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <Icons.Delete className="w-6 h-6 text-slate-400" />
+                </button>
+              </div>
+              
+              <div className="flex-1 p-8 overflow-hidden relative bg-slate-50/50">
+                <div className="absolute inset-0 overflow-auto p-20">
+                  <div className="relative w-[2000px] h-[2000px]">
+                    {/* Mocking other tables in the system */}
+                    {['users', 'products', 'orders', 'payments'].map((tableName, idx) => {
+                      const isTarget = tableName === selectedRequest.table;
+                      return (
+                        <motion.div 
+                          key={tableName} 
+                          drag
+                          dragMomentum={false}
+                          initial={{ x: 100 + (idx * 300), y: 100 + (idx % 2 * 50) }}
+                          className={cn(
+                            "absolute w-64 bg-white rounded-xl border shadow-sm overflow-hidden transition-shadow cursor-move active:shadow-xl active:z-50",
+                            isTarget ? "border-brand-500 ring-4 ring-brand-500/10 z-10" : "border-slate-200 opacity-60 hover:opacity-100"
+                          )}
+                        >
+                          <div className={cn(
+                            "px-3 py-2 text-xs font-bold select-none",
+                            isTarget ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700"
+                          )}>
+                            {tableName}
+                            {isTarget && <span className="ml-2 text-[8px] bg-white/20 px-1 rounded">PROPOSED</span>}
+                          </div>
+                          <div className="p-3 space-y-1.5 pointer-events-none">
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                              <Icons.PK className="w-3 h-3" /> id (BIGINT)
+                            </div>
+                            {isTarget ? (
+                              <>
+                                {selectedRequest.changes.map((change, idx) => (
+                                  <div key={idx} className={cn(
+                                    "flex items-center gap-2 text-[10px] font-bold px-1.5 py-0.5 rounded",
+                                    change.type === 'add_column' ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
+                                  )}>
+                                    <Icons.String className="w-3 h-3" /> 
+                                    {change.type === 'modify_column' ? change.after?.split(' ')[0] : change.column}
+                                  </div>
+                                ))}
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                <Icons.String className="w-3 h-3" /> ... (hidden)
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                              <Icons.Date className="w-3 h-3" /> created_at
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                {/* Drag Instruction Overlay */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold rounded-full pointer-events-none flex items-center gap-2">
+                  <Icons.Sync className="w-3 h-3 animate-spin-slow" />
+                  테이블을 드래그하여 자유롭게 배치할 수 있습니다.
+                </div>
+              </div>
+              
+              <div className="px-8 py-4 bg-white border-t border-slate-200 flex justify-end">
+                <button 
+                  onClick={() => setShowFullPreview(false)}
+                  className="px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Request List */}
       <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
         <div className="p-4 border-b border-slate-100 bg-slate-50/50">
@@ -765,6 +872,13 @@ const RequestsView = () => {
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowFullPreview(true)}
+                    className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors flex items-center gap-2"
+                  >
+                    <Icons.Eye className="w-4 h-4" />
+                    Visual Preview
+                  </button>
                   <button className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-200 transition-colors">
                     Reject
                   </button>
@@ -778,31 +892,95 @@ const RequestsView = () => {
                   </button>
                 </div>
               </div>
+            </div>
 
-              {/* Diff View */}
-              <div className="space-y-4">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Schema Changes (Before vs After)</h4>
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    <div className="px-4 py-2 border-r border-slate-200">Current State</div>
-                    <div className="px-4 py-2">Proposed Change</div>
-                  </div>
-                  <div className="divide-y divide-slate-100">
-                    {selectedRequest.changes.map((change, i) => (
-                      <div key={i} className="grid grid-cols-2 text-sm font-mono">
-                        <div className="px-4 py-3 border-r border-slate-200 bg-slate-50/30 text-slate-400 line-through decoration-red-300">
-                          {change.before}
-                        </div>
-                        <div className={cn(
-                          "px-4 py-3",
-                          change.type === 'add_column' ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-blue-50 text-blue-700 font-bold"
-                        )}>
-                          <span className="mr-2">{change.type === 'add_column' ? '+' : 'Δ'}</span>
-                          {change.after}
-                        </div>
+            {/* Visual Comparison Viewers */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Before State */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Schema (Before)</span>
+                  <div className="w-2 h-2 rounded-full bg-slate-300" />
+                </div>
+                <div className="p-6 bg-slate-50/30 min-h-[200px] flex items-center justify-center">
+                  <div className="w-full max-w-[240px] bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden opacity-60">
+                    <div className="px-3 py-2 bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-700">
+                      {selectedRequest.table}
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <Icons.PK className="w-3 h-3" /> id (BIGINT)
                       </div>
-                    ))}
+                      {selectedRequest.changes.filter(c => c.type === 'modify_column').map((c, i) => (
+                        <div key={i} className="flex items-center gap-2 text-[10px] text-slate-400 line-through">
+                          <Icons.String className="w-3 h-3" /> {c.column}
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <Icons.Date className="w-3 h-3" /> created_at
+                      </div>
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              {/* After State */}
+              <div className="bg-white rounded-2xl border border-brand-100 shadow-sm overflow-hidden ring-2 ring-brand-500/10">
+                <div className="px-4 py-2 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider">Proposed Schema (After)</span>
+                  <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+                </div>
+                <div className="p-6 bg-brand-50/10 min-h-[200px] flex items-center justify-center">
+                  <div className="w-full max-w-[240px] bg-white rounded-lg border border-brand-200 shadow-md overflow-hidden">
+                    <div className="px-3 py-2 bg-brand-600 text-white text-xs font-bold">
+                      {selectedRequest.table}
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <Icons.PK className="w-3 h-3" /> id (BIGINT)
+                      </div>
+                      {selectedRequest.changes.map((change, i) => (
+                        <div key={i} className={cn(
+                          "flex items-center gap-2 text-[10px] font-bold px-1.5 py-0.5 rounded",
+                          change.type === 'add_column' ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"
+                        )}>
+                          <Icons.String className="w-3 h-3" /> 
+                          {change.type === 'modify_column' ? change.after?.split(' ')[0] : change.column}
+                          <span className="ml-auto text-[8px] opacity-70 uppercase">{change.type === 'add_column' ? 'New' : 'Mod'}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <Icons.Date className="w-3 h-3" /> created_at
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Diff View */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Schema Changes (Before vs After)</h4>
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="grid grid-cols-2 bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <div className="px-4 py-2 border-r border-slate-200">Current State</div>
+                  <div className="px-4 py-2">Proposed Change</div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {selectedRequest.changes.map((change, i) => (
+                    <div key={i} className="grid grid-cols-2 text-sm font-mono">
+                      <div className="px-4 py-3 border-r border-slate-200 bg-slate-50/30 text-slate-400 line-through decoration-red-300">
+                        {change.before}
+                      </div>
+                      <div className={cn(
+                        "px-4 py-3",
+                        change.type === 'add_column' ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-blue-50 text-blue-700 font-bold"
+                      )}>
+                        <span className="mr-2">{change.type === 'add_column' ? '+' : 'Δ'}</span>
+                        {change.after}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -974,7 +1152,10 @@ const DashboardView = () => {
   );
 };
 
-const DesignerView = () => {
+const DesignerView = ({ currentService }: { currentService: ServiceConfig }) => {
+  const [showSqlModal, setShowSqlModal] = useState(false);
+  const [generatedSql, setGeneratedSql] = useState('');
+
   const initialNodes: Node[] = MOCK_TABLES.map((t, i) => ({
     id: t.id,
     type: 'table',
@@ -994,8 +1175,74 @@ const DesignerView = () => {
   const onEdgesChange = (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds));
   const onConnect = (params: Connection) => setEdges((eds) => addEdge(params, eds));
 
+  const handleGenerateSql = () => {
+    const sql = `-- Migration SQL for Schema: ${currentService.name}\n` +
+                `CREATE TABLE users (\n` +
+                `  id BIGINT PRIMARY KEY,\n` +
+                `  email VARCHAR(255) NOT NULL,\n` +
+                `  name VARCHAR(100),\n` +
+                `  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n` +
+                `);\n\n` +
+                `CREATE TABLE posts (\n` +
+                `  id BIGINT PRIMARY KEY,\n` +
+                `  user_id BIGINT REFERENCES users(id),\n` +
+                `  title VARCHAR(255) NOT NULL,\n` +
+                `  body TEXT,\n` +
+                `  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n` +
+                `);`;
+    
+    setGeneratedSql(sql);
+    setShowSqlModal(true);
+  };
+
   return (
     <div className="h-[calc(100vh-180px)] bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative">
+      {/* SQL Preview Modal */}
+      <AnimatePresence>
+        {showSqlModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-8"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-white/10"
+            >
+              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <Icons.Terminal className="w-5 h-5 text-brand-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Generated Migration SQL</h3>
+                </div>
+                <button onClick={() => setShowSqlModal(false)} className="text-slate-400 hover:text-white">
+                  <Icons.Delete className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 bg-slate-950">
+                <pre className="text-brand-300 font-mono text-sm leading-relaxed overflow-x-auto p-4 bg-black/30 rounded-xl border border-white/5">
+                  {generatedSql}
+                </pre>
+              </div>
+              <div className="px-6 py-4 bg-slate-800 border-t border-white/10 flex justify-end gap-3">
+                <button 
+                  onClick={() => setShowSqlModal(false)}
+                  className="px-4 py-2 text-slate-400 text-sm font-bold hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button className="px-6 py-2 bg-brand-600 text-white rounded-lg text-sm font-bold hover:bg-brand-700 flex items-center gap-2">
+                  <Icons.Copy className="w-4 h-4" />
+                  Copy to Clipboard
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1029,7 +1276,10 @@ const DesignerView = () => {
             </div>
           </div>
           <div className="pt-4 border-t border-slate-100">
-            <button className="w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
+            <button 
+              onClick={handleGenerateSql}
+              className="w-full py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors shadow-lg shadow-brand-500/20 active:scale-95"
+            >
               Generate Migration SQL
             </button>
           </div>
@@ -1331,7 +1581,7 @@ export default function App() {
             >
               {activeView === 'dashboard' && <DashboardView />}
               {activeView === 'services' && <ServicesView onSelectService={handleSelectService} />}
-              {activeView === 'designer' && <DesignerView />}
+              {activeView === 'designer' && <DesignerView currentService={currentService} />}
               {activeView === 'requests' && <RequestsView />}
               {activeView === 'drift' && <DriftView />}
               {activeView === 'dictionary' && <DictionaryView />}

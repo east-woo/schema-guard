@@ -8,6 +8,7 @@ import {
   Search, 
   User,
   ShieldCheck,
+  Eye,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -29,7 +30,9 @@ import {
   Trash2,
   Save,
   FileSpreadsheet,
-  Upload
+  Upload,
+  Terminal,
+  Copy
 } from 'lucide-react';
 
 export const Icons = {
@@ -43,6 +46,7 @@ export const Icons = {
   User: User,
   Logo: ShieldCheck,
   ShieldCheck: ShieldCheck,
+  Eye: Eye,
   Alert: AlertTriangle,
   Success: CheckCircle2,
   Time: Clock,
@@ -64,5 +68,7 @@ export const Icons = {
   Delete: Trash2,
   Save: Save,
   Excel: FileSpreadsheet,
-  Upload: Upload
+  Upload: Upload,
+  Terminal: Terminal,
+  Copy: Copy
 };
